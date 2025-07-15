@@ -190,7 +190,7 @@ export function Checkout() {
         shippingAddress
       })
 
-      // Create order items and update stock
+      // Create order items, update stock, and create seller earnings
       for (const item of cartItems) {
         await blink.db.orderItems.create({
           id: `orderitem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -206,6 +206,35 @@ export function Checkout() {
           await blink.db.products.update(item.productId, {
             stock_quantity: newStock
           })
+
+          // Create seller earnings record
+          const unitPrice = item.product.price
+          const totalEarnings = unitPrice * item.quantity
+          const commissionRate = 0.05 // 5% platform commission
+          const commissionAmount = totalEarnings * commissionRate
+          const netEarnings = totalEarnings - commissionAmount
+
+          // Get product to find seller_id
+          const products = await blink.db.products.list({
+            where: { id: item.productId },
+            limit: 1
+          })
+
+          if (products.length > 0) {
+            await blink.db.sellerEarnings.create({
+              id: `earning_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              sellerId: products[0].user_id,
+              orderId,
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice,
+              totalEarnings,
+              commissionRate,
+              commissionAmount,
+              netEarnings,
+              status: 'available' // Available for payout after order completion
+            })
+          }
         }
       }
 

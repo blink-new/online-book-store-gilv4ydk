@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Edit, Trash2, Package, DollarSign, Users, TrendingUp, Tag, Percent, Calendar } from 'lucide-react'
+import { Plus, Edit, Trash2, Package, DollarSign, Users, TrendingUp, Tag, Percent, Calendar, Wallet } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Switch } from '../components/ui/switch'
 import { useToast } from '../hooks/use-toast'
 import { blink } from '../blink/client'
+import { SellerPayouts } from '../components/SellerPayouts'
 
 interface Product {
   id: string
@@ -421,7 +422,7 @@ export function AdminDashboard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="products" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Products
@@ -429,6 +430,10 @@ export function AdminDashboard() {
           <TabsTrigger value="discounts" className="flex items-center gap-2">
             <Tag className="h-4 w-4" />
             Discount Codes
+          </TabsTrigger>
+          <TabsTrigger value="payouts" className="flex items-center gap-2">
+            <Wallet className="h-4 w-4" />
+            Payouts
           </TabsTrigger>
         </TabsList>
 
@@ -936,6 +941,10 @@ export function AdminDashboard() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="payouts" className="space-y-6">
+          <SellerPayouts />
         </TabsContent>
       </Tabs>
     </div>
