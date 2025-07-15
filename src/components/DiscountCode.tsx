@@ -46,11 +46,11 @@ export function DiscountCode({ subtotal, onDiscountApplied, onDiscountRemoved, a
       setLoading(true)
       const user = await blink.auth.me()
 
-      // Find the discount code
+      // Find the discount code using snake_case field names
       const discountCodes = await blink.db.discountCodes.list({
         where: { 
           code: code.toUpperCase(),
-          isActive: "1" // SQLite boolean as string
+          is_active: "1" // SQLite boolean as string
         },
         limit: 1
       })
@@ -64,7 +64,21 @@ export function DiscountCode({ subtotal, onDiscountApplied, onDiscountRemoved, a
         return
       }
 
-      const discountCode = discountCodes[0]
+      const discountCodeData = discountCodes[0]
+      
+      // Map database fields to expected interface
+      const discountCode = {
+        id: discountCodeData.id,
+        code: discountCodeData.code,
+        description: discountCodeData.description || '',
+        discountType: discountCodeData.discount_type as 'percentage' | 'fixed',
+        discountValue: discountCodeData.discount_value,
+        minimumOrderAmount: discountCodeData.minimum_order_amount || 0,
+        maxUses: discountCodeData.max_uses || 0,
+        currentUses: discountCodeData.current_uses || 0,
+        expiresAt: discountCodeData.expires_at || '',
+        isActive: Number(discountCodeData.is_active) > 0
+      }
 
       // Check if code has expired
       if (discountCode.expiresAt && new Date(discountCode.expiresAt) < new Date()) {
@@ -96,11 +110,11 @@ export function DiscountCode({ subtotal, onDiscountApplied, onDiscountRemoved, a
         return
       }
 
-      // Check if user has already used this code
+      // Check if user has already used this code using snake_case field names
       const existingUses = await blink.db.discountCodeUses.list({
         where: { 
-          discountCodeId: discountCode.id,
-          userId: user.id
+          discount_code_id: discountCode.id,
+          user_id: user.id
         },
         limit: 1
       })

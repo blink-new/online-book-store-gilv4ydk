@@ -60,22 +60,36 @@ export function Checkout() {
       setLoading(true)
       const user = await blink.auth.me()
       
-      // Get cart items
+      // Get cart items using snake_case field names for database queries
       const items = await blink.db.cartItems.list({
-        where: { userId: user.id },
-        orderBy: { createdAt: 'desc' }
+        where: { user_id: user.id },
+        orderBy: { created_at: 'desc' }
       })
 
       // Get product details for each cart item
       const itemsWithProducts = await Promise.all(
         items.map(async (item) => {
           const products = await blink.db.products.list({
-            where: { id: item.productId },
+            where: { id: item.product_id },
             limit: 1
           })
+          
+          // Map database fields to expected interface
           return {
-            ...item,
-            product: products[0] || null
+            id: item.id,
+            userId: item.user_id,
+            productId: item.product_id,
+            quantity: item.quantity,
+            product: products[0] ? {
+              id: products[0].id,
+              name: products[0].name,
+              brand: products[0].brand || '',
+              price: products[0].price,
+              imageUrl: products[0].image_url || '',
+              stockQuantity: products[0].stock_quantity || 0,
+              condition: products[0].condition || 'new',
+              category: products[0].category || ''
+            } : null
           }
         })
       )
@@ -181,21 +195,21 @@ export function Checkout() {
       
       await blink.db.orders.create({
         id: orderId,
-        userId: user.id,
-        totalAmount,
-        subtotalAmount: subtotal,
-        discountAmount,
-        discountCode: appliedDiscount?.code || null,
+        user_id: user.id,
+        total_amount: totalAmount,
+        subtotal_amount: subtotal,
+        discount_amount: discountAmount,
+        discount_code: appliedDiscount?.code || null,
         status: 'completed',
-        shippingAddress
+        shipping_address: shippingAddress
       })
 
       // Create order items, update stock, and create seller earnings
       for (const item of cartItems) {
         await blink.db.orderItems.create({
           id: `orderitem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          orderId,
-          productId: item.productId,
+          order_id: orderId,
+          product_id: item.productId,
           quantity: item.quantity,
           price: item.product?.price || 0
         })
@@ -223,15 +237,15 @@ export function Checkout() {
           if (products.length > 0) {
             await blink.db.sellerEarnings.create({
               id: `earning_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              sellerId: products[0].user_id,
-              orderId,
-              productId: item.productId,
+              seller_id: products[0].user_id,
+              order_id: orderId,
+              product_id: item.productId,
               quantity: item.quantity,
-              unitPrice,
-              totalEarnings,
-              commissionRate,
-              commissionAmount,
-              netEarnings,
+              unit_price: unitPrice,
+              total_earnings: totalEarnings,
+              commission_rate: commissionRate,
+              commission_amount: commissionAmount,
+              net_earnings: netEarnings,
               status: 'available' // Available for payout after order completion
             })
           }
@@ -251,15 +265,15 @@ export function Checkout() {
           // Record the usage
           await blink.db.discountCodeUses.create({
             id: `usage_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            discountCodeId: discountCode.id,
-            userId: user.id,
-            orderId,
-            discountAmount: appliedDiscount.amount
+            discount_code_id: discountCode.id,
+            user_id: user.id,
+            order_id: orderId,
+            discount_amount: appliedDiscount.amount
           })
 
           // Update usage count
           await blink.db.discountCodes.update(discountCode.id, {
-            currentUses: discountCode.currentUses + 1
+            current_uses: (discountCode.current_uses || 0) + 1
           })
         }
       }

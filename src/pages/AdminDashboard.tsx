@@ -133,9 +133,26 @@ export function AdminDashboard() {
     try {
       setDiscountLoading(true)
       const codes = await blink.db.discountCodes.list({
-        orderBy: { createdAt: 'desc' }
+        orderBy: { created_at: 'desc' }
       })
-      setDiscountCodes(codes)
+      
+      // Map database fields to expected interface
+      const mappedCodes = codes.map(code => ({
+        id: code.id,
+        code: code.code,
+        description: code.description || '',
+        discountType: code.discount_type as 'percentage' | 'fixed',
+        discountValue: code.discount_value,
+        minimumOrderAmount: code.minimum_order_amount || 0,
+        maxUses: code.max_uses || 0,
+        currentUses: code.current_uses || 0,
+        expiresAt: code.expires_at || '',
+        isActive: Number(code.is_active) > 0,
+        createdBy: code.created_by,
+        createdAt: code.created_at
+      }))
+      
+      setDiscountCodes(mappedCodes)
     } catch (error) {
       console.error('Error loading discount codes:', error)
       toast({
@@ -302,13 +319,13 @@ export function AdminDashboard() {
       const discountData = {
         code: discountFormData.code.toUpperCase(),
         description: discountFormData.description,
-        discountType: discountFormData.discountType,
-        discountValue: parseFloat(discountFormData.discountValue),
-        minimumOrderAmount: parseFloat(discountFormData.minimumOrderAmount) || 0,
-        maxUses: parseInt(discountFormData.maxUses) || null,
-        expiresAt: discountFormData.expiresAt ? `${discountFormData.expiresAt} 23:59:59` : null,
-        isActive: discountFormData.isActive ? 1 : 0,
-        createdBy: user.id
+        discount_type: discountFormData.discountType,
+        discount_value: parseFloat(discountFormData.discountValue),
+        minimum_order_amount: parseFloat(discountFormData.minimumOrderAmount) || 0,
+        max_uses: parseInt(discountFormData.maxUses) || null,
+        expires_at: discountFormData.expiresAt ? `${discountFormData.expiresAt} 23:59:59` : null,
+        is_active: discountFormData.isActive ? 1 : 0,
+        created_by: user.id
       }
 
       if (editingDiscount) {
@@ -320,7 +337,7 @@ export function AdminDashboard() {
       } else {
         await blink.db.discountCodes.create({
           id: `disc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          currentUses: 0,
+          current_uses: 0,
           ...discountData
         })
         toast({
@@ -389,7 +406,7 @@ export function AdminDashboard() {
   const toggleDiscountStatus = async (discount: DiscountCode) => {
     try {
       const newStatus = Number(discount.isActive) > 0 ? 0 : 1
-      await blink.db.discountCodes.update(discount.id, { isActive: newStatus })
+      await blink.db.discountCodes.update(discount.id, { is_active: newStatus })
       toast({
         title: 'Success',
         description: `Discount code ${newStatus ? 'activated' : 'deactivated'} successfully.`
